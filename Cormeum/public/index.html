@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
+    <title>hackathon</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900"
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Material+Icons"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/1.4.2/vuetify.css"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/taucharts@2/dist/taucharts.min.css"
+    />
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/d3@4.13.0/build/d3.min.js"
+      charset="utf-8"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/taucharts@2/dist/taucharts.min.js"
+      type="text/javascript"
+    ></script>
+  </head>
+
+  <style>
+    * {
+      text-decoration: none;
+      color: inherit;
+    }
+  </style>
+
+  <body>
+    <noscript>
+      <strong
+        >We're sorry but hackathon doesn't work properly without JavaScript
+        enabled. Please enable it to continue.</strong
+      >
+    </noscript>
+    <div id="app"></div>
+    <!-- built files will be auto injected -->
+  </body>
+
+  <script>
+    var Graph = {
+      max_y: 100,
+      max_t: 100
+    };
+
+    var BeatCharacteristics = {
+      //Voltage and time ranges of heartbeat periods P, Q, R, S, T
+      p: {
+        sign: 1,
+        min_y: Graph.max_y * 0.05,
+        max_y: Graph.max_y * 0.2,
+        min_t: Graph.max_t * 0.12,
+        max_t: Graph.max_t * 0.2
+      },
+      pq: {
+        min_y: 0,
+        max_y: 0,
+        min_t: Graph.max_t * 0.05,
+        max_t: Graph.max_t * 0.13
+      },
+      q: {
+        sign: -1,
+        min_y: Graph.max_y * 0.05,
+        max_y: Graph.max_y * 0.2,
+        min_t: Graph.max_t * 0.04,
+        max_t: Graph.max_t * 0.08
+      },
+      r: {
+        sign: 1,
+        min_y: Graph.max_y * 0.5,
+        max_y: Graph.max_y * 1,
+        min_t: Graph.max_t * 0.1,
+        max_t: Graph.max_t * 0.17
+      },
+      s: {
+        sign: -1,
+        min_y: Graph.max_y * 0.2,
+        max_y: Graph.max_y * 0.5,
+        min_t: Graph.max_t * 0.04,
+        max_t: Graph.max_t * 0.08
+      },
+      st: {
+        min_t: Graph.max_t * 0.1,
+        max_t: Graph.max_t * 0.2
+      },
+      t: {
+        sign: 1,
+        min_y: Graph.max_y * 0.1,
+        max_y: Graph.max_y * 0.3,
+        min_t: Graph.max_t * 0.1,
+        max_t: Graph.max_t * 0.14
+      }
+    };
+
+    var Heartbeat = [];
+
+    function randomValue(min, max) {
+      return Math.floor(Math.random() * max) + min;
+    }
+
+    function generateTimes() {
+      Heartbeat.push({ t: 0 });
+      var last_t = 0;
+
+      for (var letter in BeatCharacteristics) {
+        var period = BeatCharacteristics[letter];
+        var duration = randomValue(period.min_t, period.max_t);
+
+        if (
+          letter != "pq" &&
+          letter != "st" &&
+          letter != "q" &&
+          letter != "s"
+        ) {
+          var peak_t = randomValue(0, duration);
+
+          Heartbeat.push({
+            t: last_t + peak_t
+          });
+
+          Heartbeat.push({
+            t: last_t + duration
+          });
+
+          last_t += duration;
+        } else {
+          Heartbeat.push({
+            t: last_t + duration
+          });
+
+          last_t += duration;
+        }
+      }
+    }
+
+    function generateVoltages() {
+      var j = 0;
+      var heartbeatPattern = [0, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0];
+
+      for (var i = 0; i < heartbeatPattern.length; i++) {
+        if (heartbeatPattern[i]) {
+          var period;
+          var letter = Object.keys(BeatCharacteristics)[j];
+
+          if (letter == "pq" || letter == "st") {
+            j++;
+          }
+
+          letter = Object.keys(BeatCharacteristics)[j];
+          period = BeatCharacteristics[letter];
+
+          Heartbeat[i].y =
+            period.sign * randomValue(period.min_y, period.max_y);
+
+          j++;
+        } else {
+          Heartbeat[i].y = 0;
+        }
+      }
+    }
+
+    generateTimes();
+    generateVoltages();
+
+    var chart = new Taucharts.Chart({
+      data: Heartbeat,
+      type: "line",
+      x: "t",
+      y: "y",
+      guide: {
+        x: {
+          label: { text: "Voltage", padding: 16 },
+          min: 0,
+          max: 1000,
+          nice: false
+        },
+        y: {
+          label: { text: "Time", padding: 16 },
+          min: -100,
+          max: 100,
+          nice: false
+        },
+        showGridLines: "xy"
+      }
+    });
+
+    chart.renderTo("#chart");
+  </script>
+</html>
